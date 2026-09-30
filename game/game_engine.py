@@ -4,8 +4,11 @@ from game.entities import Player, Enemy
 
 COLS, ROWS = 13, 11
 WIDTH = COLS * CELL
-HEIGHT = ROWS * CELL + 50
+HEIGHT = ROWS * CELL + 80
 FPS = 60
+SPEED_UP_MS = 15000  # enemies speed up every 15 seconds
+SPEED_STEP = 2
+MIN_MOVE_INTERVAL = 5
 
 class GameEngine:
     def __init__(self):
@@ -24,6 +27,8 @@ class GameEngine:
         self.exit_rect = pygame.Rect((COLS//2)*CELL+5, (ROWS//2)*CELL+5, CELL-10, CELL-10)
         self.caught = False
         self.won = False
+        self.start_ticks = pygame.time.get_ticks()
+        self.speed_tier = 1
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -35,6 +40,12 @@ class GameEngine:
         if self.caught or self.won: return
         keys = pygame.key.get_pressed()
         self.player.move(keys, self.walls, ROWS, COLS)
+        elapsed = pygame.time.get_ticks() - self.start_ticks
+        target_tier = elapsed // SPEED_UP_MS + 1
+        while self.speed_tier < target_tier and any(e.move_interval > MIN_MOVE_INTERVAL for e in self.enemies):
+            self.speed_tier += 1
+            for enemy in self.enemies:
+                enemy.move_interval = max(MIN_MOVE_INTERVAL, enemy.move_interval - SPEED_STEP)
         for enemy in self.enemies:
             enemy.update(self.walls, self.player, ROWS, COLS)
             if self.player.rect.colliderect(enemy.rect):
@@ -59,10 +70,13 @@ class GameEngine:
         self.player.draw(self.screen)
         for enemy in self.enemies:
             enemy.draw(self.screen)
-        hud=pygame.Rect(0,ROWS*CELL,WIDTH,50)
+        hud=pygame.Rect(0,ROWS*CELL,WIDTH,80)
         pygame.draw.rect(self.screen,(30,30,50),hud)
         info=self.font.render("Reach EXIT before the enemy catches you!  R=Restart",True,(200,200,200))
         self.screen.blit(info,(8,ROWS*CELL+14))
+        maxed = all(e.move_interval <= MIN_MOVE_INTERVAL for e in self.enemies)
+        tier=self.font.render(f"Enemy Speed: Tier {self.speed_tier}"+(" (MAX)" if maxed else ""),True,(255,200,80))
+        self.screen.blit(tier,(8,ROWS*CELL+46))
         if self.caught:
             self._overlay("CAUGHT!", (220,60,60))
         if self.won:
