@@ -4,7 +4,7 @@ from game.entities import Player, Enemy
 
 COLS, ROWS = 13, 11
 WIDTH = COLS * CELL
-HEIGHT = ROWS * CELL + 80
+HEIGHT = ROWS * CELL + 110
 FPS = 60
 SPEED_UP_MS = 15000  # enemies speed up every 15 seconds
 SPEED_STEP = 2
@@ -35,6 +35,7 @@ class GameEngine:
         self.pellet_rect = pygame.Rect(pc*CELL+CELL//2-9, pr*CELL+CELL//2-9, 18, 18)
         self.pellet_active = True
         self.freeze_timer = 0
+        self.score = 0
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -44,6 +45,7 @@ class GameEngine:
 
     def update(self):
         if self.caught or self.won: return
+        self.score += 1
         keys = pygame.key.get_pressed()
         self.player.move(keys, self.walls, ROWS, COLS)
         elapsed = pygame.time.get_ticks() - self.start_ticks
@@ -89,7 +91,7 @@ class GameEngine:
         self.player.draw(self.screen)
         for enemy in self.enemies:
             enemy.draw(self.screen)
-        hud=pygame.Rect(0,ROWS*CELL,WIDTH,80)
+        hud=pygame.Rect(0,ROWS*CELL,WIDTH,110)
         pygame.draw.rect(self.screen,(30,30,50),hud)
         info=self.font.render("Reach EXIT before the enemy catches you!  R=Restart",True,(200,200,200))
         self.screen.blit(info,(8,ROWS*CELL+14))
@@ -99,6 +101,8 @@ class GameEngine:
         if self.freeze_timer > 0:
             frz=self.font.render(f"FROZEN: {(self.freeze_timer+59)//60}s",True,(120,200,255))
             self.screen.blit(frz,(WIDTH-frz.get_width()-8,ROWS*CELL+46))
+        surv=self.font.render(f"Survived: {self.score//60}s",True,(200,200,200))
+        self.screen.blit(surv,(8,ROWS*CELL+78))
         if self.caught:
             self._overlay("CAUGHT!", (220,60,60))
         if self.won:
@@ -113,6 +117,8 @@ class GameEngine:
         sub=self.font.render("Press R to Restart",True,(200,200,200))
         self.screen.blit(msg,(WIDTH//2-msg.get_width()//2,ROWS*CELL//2-30))
         self.screen.blit(sub,(WIDTH//2-sub.get_width()//2,ROWS*CELL//2+20))
+        res=self.font.render(f"Final Score: {self.score}  (Survived: {self.score//60}s)",True,(255,255,255))
+        self.screen.blit(res,(WIDTH//2-res.get_width()//2,ROWS*CELL//2+52))
 
     def run(self):
         running=True
